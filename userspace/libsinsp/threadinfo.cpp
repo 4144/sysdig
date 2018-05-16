@@ -1357,20 +1357,7 @@ void sinsp_thread_manager::dump_threads_to_file(scap_dumper_t* dumper)
 
 	for(auto it = m_threadtable.begin(); it != m_threadtable.end(); ++it)
 	{
-		scap_threadinfo *sctinfo;
-
-		if((sctinfo = scap_proc_alloc(m_inspector->m_h)) == NULL)
-		{
-			throw sinsp_exception(scap_getlasterr(m_inspector->m_h));
-		}
-
 		sinsp_threadinfo& tinfo = it->second;
-
-		tinfo.args_to_scap(sctinfo);
-		tinfo.env_to_scap(sctinfo);
-		tinfo.cgroups_to_scap(sctinfo);
-
-		string tcwd = (tinfo.m_cwd == "")? "/": tinfo.m_cwd;
 
 		uint32_t il = (uint32_t)
 			(sizeof(uint64_t) +	// tid
@@ -1381,8 +1368,9 @@ void sinsp_thread_manager::dump_threads_to_file(scap_dumper_t* dumper)
 			2 + MIN(tinfo.m_comm.size(), SCAP_MAX_PATH_SIZE) +
 			2 + MIN(tinfo.m_exe.size(), SCAP_MAX_PATH_SIZE) +
 			2 + MIN(tinfo.m_exepath.size(), SCAP_MAX_PATH_SIZE) +
-			2 + sctinfo->args_len +
-			2 + MIN(tcwd.size(), SCAP_MAX_PATH_SIZE) +
+                        2 + tinfo.m_args_str.size() +
+                        // 1 is sizeof("/")
+                        2 + MIN((tinfo.m_cwd == "")? 1 : tinfo.m_cwd.size(), SCAP_MAX_PATH_SIZE) +
 			sizeof(uint64_t) +	// fdlimit
 			sizeof(uint32_t) +	// uid
 			sizeof(uint32_t) +	// gid
@@ -1391,16 +1379,14 @@ void sinsp_thread_manager::dump_threads_to_file(scap_dumper_t* dumper)
 			sizeof(uint32_t) +  // vmswap_kb
 			sizeof(uint64_t) +  // pfmajor
 			sizeof(uint64_t) +  // pfminor
-			2 + sctinfo->env_len +
+                        2 + tinfo.m_env_str.size() +
 			sizeof(int64_t) +  // vtid
 			sizeof(int64_t) +  // vpid
-			2 + sctinfo->cgroups_len +
+                        2 + tinfo.m_cgroups_str.size() +
 			sizeof(uint32_t) +
 			2 + MIN(tinfo.m_root.size(), SCAP_MAX_PATH_SIZE));
 
 		totlen += il;
-
-		scap_proc_free(m_inspector->m_h, sctinfo);
 	}
 
 	//
@@ -1490,7 +1476,7 @@ void sinsp_thread_manager::dump_threads_to_file(scap_dumper_t* dumper)
 				tinfo.fd_to_scap(scfdinfo, &it->second);
 
 				//
-				// Add the new fd to the scap table
+				// Add the new fd to the scap table.
 				//
 				if(scap_fd_add(sctinfo, it->first, scfdinfo) != SCAP_SUCCESS)
 				{
