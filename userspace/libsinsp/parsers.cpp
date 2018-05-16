@@ -1135,6 +1135,7 @@ void sinsp_parser::parse_clone_exit(sinsp_evt *evt)
 
 		// Copy the command arguments from the parent
 		tinfo.m_args = ptinfo->m_args;
+		tinfo.m_args_str = ptinfo->m_args_str;
 
 		// Copy the root from the parent
 		tinfo.m_root = ptinfo->m_root;
@@ -1177,6 +1178,7 @@ void sinsp_parser::parse_clone_exit(sinsp_evt *evt)
 			tinfo.m_exe = ptinfo->m_exe;
 			tinfo.m_exepath = ptinfo->m_exepath;
 			tinfo.m_args = ptinfo->m_args;
+			tinfo.m_args_str = ptinfo->m_args_str;
 			tinfo.m_root = ptinfo->m_root;
 			tinfo.m_sid = ptinfo->m_sid;
 			tinfo.m_vpgid = ptinfo->m_vpgid;

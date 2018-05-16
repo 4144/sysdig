@@ -230,8 +230,11 @@ public:
 	string m_exe; ///< argv[0] (e.g. "sshd: user@pts/4")
 	string m_exepath; ///< full executable path
 	vector<string> m_args; ///< Command line arguments (e.g. "-d1")
+	string m_args_str; // m_args combined, separated by '\0', capped to SCAP_MAX_ARGS_SIZE
 	vector<string> m_env; ///< Environment variables
+	string m_env_str; //  m_env combined, separated by '\0', capped to SCAP_MAX_ENV_SIZE
 	vector<pair<string, string>> m_cgroups; ///< subsystem-cgroup pairs
+	string m_cgroups_str; // m_cgroups combined, separated by '\0', cappped to SCAP_MAX_CGROUPS_SIZE
 	string m_container_id; ///< heuristic-based container id
 	uint32_t m_flags; ///< The thread flags. See the PPM_CL_* declarations in ppm_events_public.h.
 	int64_t m_fdlimit;  ///< The maximum number of FDs this thread can open
@@ -327,9 +330,6 @@ VISIBILITY_PRIVATE
 	void allocate_private_state();
 	void compute_program_hash();
 	sinsp_threadinfo* lookup_thread();
-	inline void args_to_scap(scap_threadinfo* sctinfo);
-	inline void env_to_scap(scap_threadinfo* sctinfo);
-	inline void cgroups_to_scap(scap_threadinfo* sctinfo);
 	void fd_to_scap(scap_fdinfo *dst, sinsp_fdinfo_t* src);
 
 	//  void push_fdop(sinsp_fdop* op);

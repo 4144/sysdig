@@ -502,6 +502,14 @@ void sinsp_threadinfo::set_args(const char* args, size_t len)
 		m_args.push_back(args + offset);
 		offset += m_args.back().length() + 1;
 	}
+
+	// Also assign and truncate m_args_str
+	m_args_str.assign(args, len);
+	if(m_args_str.size() >= SCAP_MAX_ARGS_SIZE)
+	{
+		m_args_str.resize(SCAP_MAX_ARGS_SIZE-1);
+		m_args_str += '\0';
+	}
 }
 
 void sinsp_threadinfo::set_env(const char* env, size_t len)
@@ -528,6 +536,14 @@ void sinsp_threadinfo::set_env(const char* env, size_t len)
 		m_env.push_back(left);
 
 		offset += m_env.back().length() + 1;
+	}
+
+	// Also assign and truncate m_env_str
+	m_env_str.assign(env, len);
+	if(m_env_str.size() >= SCAP_MAX_ENV_SIZE)
+	{
+		m_env_str.resize(SCAP_MAX_ENV_SIZE-1);
+		m_env_str += '\0';
 	}
 }
 
@@ -619,6 +635,14 @@ void sinsp_threadinfo::set_cgroups(const char* cgroups, size_t len)
 
 		m_cgroups.push_back(std::make_pair(subsys, cgroup));
 		offset += subsys_length + 1 + cgroup.length() + 1;
+	}
+
+	// Also assign and truncate m_cgroups_str
+	m_cgroups_str.assign(cgroups, len);
+	if(m_cgroups_str.size() >= SCAP_MAX_CGROUPS_SIZE)
+	{
+		m_cgroups_str.resize(SCAP_MAX_CGROUPS_SIZE-1);
+		m_cgroups_str += '\0';
 	}
 }
 
@@ -958,100 +982,6 @@ inline void scpy(char* dst, const char* src, uint32_t maxlen)
 	}
 }
 
-void sinsp_threadinfo::args_to_scap(scap_threadinfo* sctinfo)
-{
-	uint32_t alen = SCAP_MAX_ARGS_SIZE;
-	uint32_t tlen = 0;
-	char* dst = sctinfo->args;
-
-	for(auto it = m_args.begin(); it != m_args.end(); ++it)
-	{
-		uint32_t len = it->size() + 1;
-
-		scpy(dst + tlen, it->c_str(), alen);
-
-		if(len >= alen) 
-		{
-			//
-			// We saturated the args buffer. Null terminate it and return
-			//
-			sctinfo->args[SCAP_MAX_ARGS_SIZE - 1] = 0;
-			sctinfo->args_len = SCAP_MAX_ARGS_SIZE;
-			return;
-		}
-		else
-		{
-			tlen += len;
-			alen -= len;
-		}
-	}
-
-	sctinfo->args_len = tlen;
-}
-
-void sinsp_threadinfo::env_to_scap(scap_threadinfo* sctinfo)
-{
-	uint32_t alen = SCAP_MAX_ENV_SIZE;
-	uint32_t tlen = 0;
-	char* dst = sctinfo->env;
-
-	for(auto it = m_env.begin(); it != m_env.end(); ++it)
-	{
-		uint32_t len = it->size() + 1;
-
-		scpy(dst + tlen, it->c_str(), alen);
-
-		if(len >= alen) 
-		{
-			//
-			// We saturated the args buffer. Null terminate it and return
-			//
-			sctinfo->env[SCAP_MAX_ENV_SIZE - 1] = 0;
-			sctinfo->env_len = SCAP_MAX_ENV_SIZE;
-			return;
-		}
-		else
-		{
-			tlen += len;
-			alen -= len;
-		}
-	}
-
-	sctinfo->env_len = tlen;
-}
-
-void sinsp_threadinfo::cgroups_to_scap(scap_threadinfo* sctinfo)
-{
-	uint32_t alen = SCAP_MAX_CGROUPS_SIZE;
-	uint32_t tlen = 0;
-	char* dst = sctinfo->cgroups;
-
-	for(auto it = m_cgroups.begin(); it != m_cgroups.end(); ++it)
-	{
-		string a = it->first + "=" + it->second;
-		uint32_t len = a.size() + 1;
-
-		scpy(dst + tlen, a.c_str(), alen);
-
-		if(len >= alen) 
-		{
-			//
-			// We saturated the args buffer. Null terminate it and return
-			//
-			sctinfo->cgroups[SCAP_MAX_CGROUPS_SIZE - 1] = 0;
-			sctinfo->cgroups_len = SCAP_MAX_CGROUPS_SIZE;
-			return;
-		}
-		else
-		{
-			tlen += len;
-			alen -= len;
-		}
-	}
-
-	sctinfo->cgroups_len = tlen;
-}
-
 void sinsp_threadinfo::fd_to_scap(scap_fdinfo *dst, sinsp_fdinfo_t* src)
 {
 	dst->type = src->m_type;
@@ -1386,24 +1316,23 @@ void sinsp_thread_manager::free_dump_fdinfos(vector<scap_fdinfo*>* fdinfos_to_fr
 	fdinfos_to_free->clear();
 }
 
+// NOTE: This does *not* populate any array-based fields (comm, exe,
+// exepath, args, env, cwd, cgroups, root)
 void sinsp_thread_manager::thread_to_scap(sinsp_threadinfo& tinfo, 	scap_threadinfo* sctinfo)
 {
 	//
 	// Fill in the thread data
 	//
+
+	// NOTE: This is doing a shallow copy of the strings from
+	// tinfo, and is valid only as long as tinfo is valid.
+
 	sctinfo->tid = tinfo.m_tid;
 	sctinfo->pid = tinfo.m_pid;
 	sctinfo->ptid = tinfo.m_ptid;
 	sctinfo->sid = tinfo.m_sid;
 	sctinfo->vpgid = tinfo.m_vpgid;
 
-	strncpy(sctinfo->comm, tinfo.m_comm.c_str(), SCAP_MAX_PATH_SIZE);
-	strncpy(sctinfo->exe, tinfo.m_exe.c_str(), SCAP_MAX_PATH_SIZE);
-	strncpy(sctinfo->exepath, tinfo.m_exepath.c_str(), SCAP_MAX_PATH_SIZE);
-	tinfo.args_to_scap(sctinfo);
-	tinfo.env_to_scap(sctinfo);
-	string tcwd = (tinfo.m_cwd == "")? "/": tinfo.m_cwd;
-	strncpy(sctinfo->cwd, tcwd.c_str(), SCAP_MAX_PATH_SIZE);
 	sctinfo->flags = tinfo.m_flags ;
 	sctinfo->fdlimit = tinfo.m_fdlimit;
 	sctinfo->uid = tinfo.m_uid;
@@ -1416,8 +1345,6 @@ void sinsp_thread_manager::thread_to_scap(sinsp_threadinfo& tinfo, 	scap_threadi
 	sctinfo->vtid = tinfo.m_vtid;
 	sctinfo->vpid = tinfo.m_vpid;
 	sctinfo->fdlist = NULL;
-	tinfo.cgroups_to_scap(sctinfo);
-	strncpy(sctinfo->root, tinfo.m_root.c_str(), SCAP_MAX_PATH_SIZE);
 	sctinfo->filtered_out = false;
 }
 
