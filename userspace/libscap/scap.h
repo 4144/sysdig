@@ -959,6 +959,18 @@ int32_t scap_write_proc_fds(scap_t *handle, struct scap_threadinfo *tinfo, scap_
 int32_t scap_write_proclist_header(scap_t *handle, scap_dumper_t *d, uint32_t totlen);
 int32_t scap_write_proclist_trailer(scap_t *handle, scap_dumper_t *d, uint32_t totlen);
 int32_t scap_write_proclist_entry(scap_t *handle, scap_dumper_t *d, struct scap_threadinfo *tinfo);
+// Variant of scap_write_proclist_entry where array-backed information
+// about the thread is provided separate from the scap_threadinfo
+// struct.
+int32_t scap_write_proclist_entry_bufs(scap_t *handle, scap_dumper_t *d, struct scap_threadinfo *tinfo,
+				       const char *comm,
+				       const char *exe,
+				       const char *exepath,
+				       const char *args, size_t args_len,
+				       const char *env, size_t env_len,
+				       const char *cwd,
+				       const char *cgroups, size_t cgroups_len,
+				       const char *root);
 int32_t scap_enable_simpledriver_mode(scap_t* handle);
 int32_t scap_get_n_tracepoint_hit(scap_t* handle, long* ret);
 #ifdef CYGWING_AGENT

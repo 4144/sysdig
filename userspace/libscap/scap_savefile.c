@@ -269,22 +269,42 @@ int32_t scap_write_proclist_trailer(scap_t *handle, scap_dumper_t *d, uint32_t t
 //
 int32_t scap_write_proclist_entry(scap_t *handle, scap_dumper_t *d, struct scap_threadinfo *tinfo)
 {
+
+	return scap_write_proclist_entry_bufs(handle, d, tinfo,
+					      tinfo->comm,
+					      tinfo->exe,
+					      tinfo->exepath,
+					      tinfo->args, tinfo->args_len,
+					      tinfo->env, tinfo->env_len,
+					      tinfo->cwd,
+					      tinfo->cgroups, tinfo->cgroups_len,
+					      tinfo->root);
+}
+
+int32_t scap_write_proclist_entry_bufs(scap_t *handle, scap_dumper_t *d, struct scap_threadinfo *tinfo,
+				       const char *comm,
+				       const char *exe,
+				       const char *exepath,
+				       const char *args, size_t args_len,
+				       const char *env, size_t env_len,
+				       const char *cwd,
+				       const char *cgroups, size_t cgroups_len,
+				       const char *root)
+{
 	uint16_t commlen;
 	uint16_t exelen;
 	uint16_t exepathlen;
-	uint16_t argslen;
 	uint16_t cwdlen;
 	uint16_t rootlen;
 
 	//
 	// Second pass of the table to dump it
 	//
-	commlen = (uint16_t)strnlen(tinfo->comm, SCAP_MAX_PATH_SIZE);
-	exelen = (uint16_t)strnlen(tinfo->exe, SCAP_MAX_PATH_SIZE);
-	exepathlen = (uint16_t)strnlen(tinfo->exepath, SCAP_MAX_PATH_SIZE);
-	argslen = tinfo->args_len;
-	cwdlen = (uint16_t)strnlen(tinfo->cwd, SCAP_MAX_PATH_SIZE);
-	rootlen = (uint16_t)strnlen(tinfo->root, SCAP_MAX_PATH_SIZE);
+	commlen = (uint16_t)strnlen(comm, SCAP_MAX_PATH_SIZE);
+	exelen = (uint16_t)strnlen(exe, SCAP_MAX_PATH_SIZE);
+	exepathlen = (uint16_t)strnlen(exepath, SCAP_MAX_PATH_SIZE);
+	cwdlen = (uint16_t)strnlen(cwd, SCAP_MAX_PATH_SIZE);
+	rootlen = (uint16_t)strnlen(root, SCAP_MAX_PATH_SIZE);
 
 	if(scap_dump_write(d, &(tinfo->tid), sizeof(uint64_t)) != sizeof(uint64_t) ||
 		    scap_dump_write(d, &(tinfo->pid), sizeof(uint64_t)) != sizeof(uint64_t) ||
@@ -292,15 +312,15 @@ int32_t scap_write_proclist_entry(scap_t *handle, scap_dumper_t *d, struct scap_
 		    scap_dump_write(d, &(tinfo->sid), sizeof(uint64_t)) != sizeof(uint64_t) ||
 		    scap_dump_write(d, &(tinfo->vpgid), sizeof(uint64_t)) != sizeof(uint64_t) ||
 		    scap_dump_write(d, &commlen, sizeof(uint16_t)) != sizeof(uint16_t) ||
-		    scap_dump_write(d, tinfo->comm, commlen) != commlen ||
+                    scap_dump_write(d, (char *) comm, commlen) != commlen ||
 		    scap_dump_write(d, &exelen, sizeof(uint16_t)) != sizeof(uint16_t) ||
-		    scap_dump_write(d, tinfo->exe, exelen) != exelen ||
-			scap_dump_write(d, &exepathlen, sizeof(uint16_t)) != sizeof(uint16_t) ||
-			scap_dump_write(d, tinfo->exepath, exepathlen) != exepathlen ||
-		    scap_dump_write(d, &argslen, sizeof(uint16_t)) != sizeof(uint16_t) ||
-		    scap_dump_write(d, tinfo->args, argslen) != argslen ||
+                    scap_dump_write(d, (char *) exe, exelen) != exelen ||
+                    scap_dump_write(d, &exepathlen, sizeof(uint16_t)) != sizeof(uint16_t) ||
+                    scap_dump_write(d, (char *) exepath, exepathlen) != exepathlen ||
+		    scap_dump_write(d, &args_len, sizeof(uint16_t)) != sizeof(uint16_t) ||
+                    scap_dump_write(d, (char *) args, args_len) != args_len ||
 		    scap_dump_write(d, &cwdlen, sizeof(uint16_t)) != sizeof(uint16_t) ||
-		    scap_dump_write(d, tinfo->cwd, cwdlen) != cwdlen ||
+                    scap_dump_write(d, (char *) cwd, cwdlen) != cwdlen ||
 		    scap_dump_write(d, &(tinfo->fdlimit), sizeof(uint64_t)) != sizeof(uint64_t) ||
 		    scap_dump_write(d, &(tinfo->flags), sizeof(uint32_t)) != sizeof(uint32_t) ||
 		    scap_dump_write(d, &(tinfo->uid), sizeof(uint32_t)) != sizeof(uint32_t) ||
@@ -310,14 +330,14 @@ int32_t scap_write_proclist_entry(scap_t *handle, scap_dumper_t *d, struct scap_
 		    scap_dump_write(d, &(tinfo->vmswap_kb), sizeof(uint32_t)) != sizeof(uint32_t) ||
 		    scap_dump_write(d, &(tinfo->pfmajor), sizeof(uint64_t)) != sizeof(uint64_t) ||
 		    scap_dump_write(d, &(tinfo->pfminor), sizeof(uint64_t)) != sizeof(uint64_t) ||
-		    scap_dump_write(d, &(tinfo->env_len), sizeof(uint16_t)) != sizeof(uint16_t) ||
-		    scap_dump_write(d, tinfo->env, tinfo->env_len) != tinfo->env_len ||
+		    scap_dump_write(d, &(env_len), sizeof(uint16_t)) != sizeof(uint16_t) ||
+                    scap_dump_write(d, (char *) env, env_len) != env_len ||
 		    scap_dump_write(d, &(tinfo->vtid), sizeof(int64_t)) != sizeof(int64_t) ||
 		    scap_dump_write(d, &(tinfo->vpid), sizeof(int64_t)) != sizeof(int64_t) ||
-		    scap_dump_write(d, &(tinfo->cgroups_len), sizeof(uint16_t)) != sizeof(uint16_t) ||
-		    scap_dump_write(d, tinfo->cgroups, tinfo->cgroups_len) != tinfo->cgroups_len ||
+		    scap_dump_write(d, &(cgroups_len), sizeof(uint16_t)) != sizeof(uint16_t) ||
+                    scap_dump_write(d, (char *) cgroups, cgroups_len) != cgroups_len ||
 		    scap_dump_write(d, &rootlen, sizeof(uint16_t)) != sizeof(uint16_t) ||
-		    scap_dump_write(d, tinfo->root, rootlen) != rootlen)
+                    scap_dump_write(d, (char *) root, rootlen) != rootlen)
 	{
 		snprintf(handle->m_lasterr, SCAP_LASTERR_SIZE, "error writing to file (2)");
 		return SCAP_FAILURE;
