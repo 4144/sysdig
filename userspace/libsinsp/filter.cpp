@@ -2077,13 +2077,18 @@ sinsp_evttype_filter::~sinsp_evttype_filter()
 		delete val.second->filter;
 		delete val.second;
 	}
+
+	for(auto &ruleset : m_rulesets)
+	{
+		delete ruleset;
+	}
 	m_filters.clear();
 }
 
 sinsp_evttype_filter::ruleset_filters::ruleset_filters()
 {
-	memset(m_filter_by_evttype, 0, PPM_EVENT_MAX * sizeof(list<sinsp_filter *> *));
-	memset(m_filter_by_syscall, 0, PPM_SC_MAX * sizeof(list<sinsp_filter *> *));
+	memset(m_filter_by_evttype, 0, PPM_EVENT_MAX * sizeof(list<filter_wrapper *> *));
+	memset(m_filter_by_syscall, 0, PPM_SC_MAX * sizeof(list<filter_wrapper *> *));
 }
 
 sinsp_evttype_filter::ruleset_filters::~ruleset_filters()
@@ -2239,32 +2244,36 @@ void sinsp_evttype_filter::enable(const string &pattern, bool enabled, uint16_t 
 {
 	regex re(pattern);
 
-	if(m_rulesets.size() < (size_t) ruleset + 1)
+	while (m_rulesets.size() < (size_t) ruleset + 1)
 	{
-		m_rulesets.resize(ruleset+1);
+		m_rulesets.push_back(new ruleset_filters());
 	}
 
 	for(const auto &val : m_filters)
 	{
 		if (regex_match(val.first, re))
 		{
-			m_rulesets[ruleset].add_filter(val.second);
+			// XXX/mstemm how to handle enabled
+			if(enabled)
+			{
+				m_rulesets[ruleset]->add_filter(val.second);
+			}
 		}
 	}
 }
 
 void sinsp_evttype_filter::enable_tags(const set<string> &tags, bool enabled, uint16_t ruleset)
 {
-	if(m_rulesets.size() < (size_t) ruleset + 1)
+	while (m_rulesets.size() < (size_t) ruleset + 1)
 	{
-		m_rulesets.resize(ruleset+1);
+		m_rulesets.push_back(new ruleset_filters());
 	}
 
 	for(const auto &tag : tags)
 	{
 		for(const auto &wrap : m_filter_by_tag[tag])
 		{
-			m_rulesets[ruleset].add_filter(wrap);
+			m_rulesets[ruleset]->add_filter(wrap);
 		}
 	}
 }
@@ -2276,17 +2285,17 @@ bool sinsp_evttype_filter::run(sinsp_evt *evt, uint16_t ruleset)
 		return false;
 	}
 
-	return m_rulesets[ruleset].run(evt);
+	return m_rulesets[ruleset]->run(evt);
 }
 
 void sinsp_evttype_filter::evttypes_for_ruleset(std::vector<bool> &evttypes, uint16_t ruleset)
 {
-	return m_rulesets[ruleset].evttypes_for_ruleset(evttypes);
+	return m_rulesets[ruleset]->evttypes_for_ruleset(evttypes);
 }
 
 void sinsp_evttype_filter::syscalls_for_ruleset(std::vector<bool> &syscalls, uint16_t ruleset)
 {
-	return m_rulesets[ruleset].syscalls_for_ruleset(syscalls);
+	return m_rulesets[ruleset]->syscalls_for_ruleset(syscalls);
 }
 
 #endif // HAS_FILTERING

@@ -249,7 +249,7 @@ private:
 		std::list<filter_wrapper *> *m_filter_by_syscall[PPM_SC_MAX];
 	};
 
-	std::vector<ruleset_filters> m_rulesets;
+	std::vector<ruleset_filters *> m_rulesets;
 
 	// Maps from tag to list of filters having that tag.
 	std::map<std::string, std::list<filter_wrapper *>> m_filter_by_tag;
