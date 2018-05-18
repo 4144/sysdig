@@ -2114,24 +2114,30 @@ sinsp_evttype_filter::ruleset_filters::~ruleset_filters()
 
 void sinsp_evttype_filter::ruleset_filters::add_filter(filter_wrapper *wrap)
 {
-	for(const auto &evttype : wrap->evttypes)
+	for(uint32_t etype = 0; etype < PPM_EVENT_MAX; etype++)
 	{
-		if(!m_filter_by_evttype[evttype])
+		if(wrap->evttypes[etype])
 		{
-			m_filter_by_evttype[evttype] = new std::list<filter_wrapper *>();
-		}
+			if(!m_filter_by_evttype[etype])
+			{
+				m_filter_by_evttype[etype] = new std::list<filter_wrapper *>();
+			}
 
-		m_filter_by_evttype[evttype]->push_back(wrap);
+			m_filter_by_evttype[etype]->push_back(wrap);
+		}
 	}
 
-	for(const auto &syscall : wrap->syscalls)
+	for(uint32_t syscall = 0; syscall < PPM_SC_MAX; syscall++)
 	{
-		if(!m_filter_by_syscall[syscall])
+		if(wrap->syscalls[syscall])
 		{
-			m_filter_by_syscall[syscall] = new std::list<filter_wrapper *>();
-		}
+			if(!m_filter_by_syscall[syscall])
+			{
+				m_filter_by_syscall[syscall] = new std::list<filter_wrapper *>();
+			}
 
-		m_filter_by_syscall[syscall]->push_back(wrap);
+			m_filter_by_syscall[syscall]->push_back(wrap);
+		}
 	}
 }
 
